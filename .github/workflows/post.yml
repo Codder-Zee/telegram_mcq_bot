@@ -1,0 +1,21 @@
+name: Telegram PYQ Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 1 * * *'
+    - cron: '30 13 * * *'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install requests
+      - run: python bot.py

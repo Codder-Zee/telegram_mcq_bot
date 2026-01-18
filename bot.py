@@ -5,13 +5,17 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")
 
 FILE = "pyq_data/marathi.txt"
 STATE_FILE = "state.json"
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "1"))  # 10 in morning/evening
 
 
 def load_state():
     if not os.path.exists(STATE_FILE):
         return {"used": []}
     with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        state = json.load(f)
+    if "used" not in state:
+        state["used"] = []
+    return state
 
 
 def save_state(state):
@@ -19,12 +23,12 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def hash_q(text):
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
+def hash_q(raw_q):
+    return hashlib.md5(raw_q.encode("utf-8")).hexdigest()
 
 
 def parse_questions(text):
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    lines = [l.rstrip() for l in text.splitlines() if l.strip()]
     questions = []
 
     i = 0
@@ -38,7 +42,7 @@ def parse_questions(text):
             i += 1
             continue
 
-        q = lines[i][2:].strip()
+        raw_q = lines[i][2:].strip()
         i += 1
 
         options = []
@@ -55,11 +59,16 @@ def parse_questions(text):
 
         if len(options) == 4:
             if z_line:
-                q = f"[{z_line}]\n\u200b\nQ: {q}"
+                poll_q = f"[{z_line}]\n\u200b\n➤ {raw_q}"
             else:
-                q = f"Q: {q}"
+                poll_q = f"➤ {raw_q}"
 
-            questions.append((q, options, correct))
+            questions.append({
+                "raw": raw_q,
+                "poll": poll_q,
+                "options": options,
+                "correct": correct
+            })
 
     return questions
 
@@ -87,12 +96,19 @@ with open(FILE, "r", encoding="utf-8") as f:
 
 print("TOTAL QUESTIONS:", len(questions))
 
+posted = 0
+
 for q in questions:
-    h = hash_q(q[0])
+    h = hash_q(q["raw"])   # 🔥 DUPLICATE FIX HERE
+
     if h in state["used"]:
         continue
 
-    send_poll(q[0], q[1], q[2])
+    send_poll(q["poll"], q["options"], q["correct"])
     state["used"].append(h)
-    save_state(state)
-    break   # हर run में सिर्फ 1 नया question
+    posted += 1
+
+    if posted >= BATCH_SIZE:
+        break
+
+save_state(state)

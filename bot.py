@@ -55,7 +55,10 @@ def parse_questions(text):
 
         if len(options) == 4:
             if z_line:
-                q = f"[{z_line}]\n{q}"
+                q = f"[{z_line}]\n\u200b\n Q: {q}"
+            else:
+                q = f"Q: {q}"
+
             questions.append((q, options, correct))
 
     return questions

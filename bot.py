@@ -55,7 +55,7 @@ def parse_questions(text):
 
         if len(options) == 4:
             if z_line:
-                q = f"[{z_line}]\n\u200b\n Q: {q}"
+                q = f"[{z_line}]\n\u200b\nQ: {q}"
             else:
                 q = f"Q: {q}"
 

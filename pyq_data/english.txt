@@ -1,0 +1,6 @@
+Q: Who was the first President of India?
+A: Dr. Rajendra Prasad *
+B: Jawaharlal Nehru
+C: Mahatma Gandhi
+D: Sardar Patel
+E: Dr. Rajendra Prasad was the first President of India.

@@ -3,8 +3,11 @@ name: Telegram PYQ Bot
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 1 * * *'
-    - cron: '30 13 * * *'
+    - cron: '30 1 * * *'   # 7 AM IST
+    - cron: '30 13 * * *'  # 7 PM IST
+
+permissions:
+  contents: write
 
 jobs:
   run:
@@ -12,10 +15,24 @@ jobs:
     env:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      BATCH_SIZE: 10
+
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+
       - run: pip install requests
+
       - run: python bot.py
+
+      # 🔥 IMPORTANT PART — state.json save
+      - name: Commit state.json
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state.json
+          git commit -m "Update state.json (auto)" || echo "No changes"
+          git push

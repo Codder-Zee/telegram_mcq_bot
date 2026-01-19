@@ -5,7 +5,7 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")
 
 FILE = "pyq_data/marathi.txt"
 STATE_FILE = "state.json"
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "1"))  # 10 in morning/evening
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "1"))
 
 
 def load_state():
@@ -43,6 +43,7 @@ def parse_questions(text):
             continue
 
         raw_q = lines[i][2:].strip()
+        block_start = i - (1 if z_line else 0)
         i += 1
 
         options = []
@@ -57,6 +58,8 @@ def parse_questions(text):
                 options.append(line[3:].strip())
             i += 1
 
+        block_end = i
+
         if len(options) == 4:
             if z_line:
                 poll_q = f"[{z_line}]\n\u200b\n➤ {raw_q}"
@@ -67,7 +70,9 @@ def parse_questions(text):
                 "raw": raw_q,
                 "poll": poll_q,
                 "options": options,
-                "correct": correct
+                "correct": correct,
+                "start": block_start,
+                "end": block_end
             })
 
     return questions
@@ -92,14 +97,17 @@ def send_poll(q, options, correct):
 state = load_state()
 
 with open(FILE, "r", encoding="utf-8") as f:
-    questions = parse_questions(f.read())
+    original_text = f.read()
+
+questions = parse_questions(original_text)
 
 print("TOTAL QUESTIONS:", len(questions))
 
 posted = 0
+remove_blocks = []
 
 for q in questions:
-    h = hash_q(q["raw"])   # 🔥 DUPLICATE FIX HERE
+    h = hash_q(q["raw"])
 
     if h in state["used"]:
         continue
@@ -108,7 +116,27 @@ for q in questions:
     state["used"].append(h)
     posted += 1
 
+    remove_blocks.append((q["start"], q["end"]))
+
     if posted >= BATCH_SIZE:
         break
+
+
+# 🔥 REMOVE POSTED QUESTIONS FROM FILE
+if remove_blocks:
+    lines = original_text.splitlines()
+    new_lines = []
+
+    for idx, line in enumerate(lines):
+        keep = True
+        for s, e in remove_blocks:
+            if s <= idx < e:
+                keep = False
+                break
+        if keep:
+            new_lines.append(line)
+
+    with open(FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(new_lines).strip() + "\n")
 
 save_state(state)
